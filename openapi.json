@@ -1,0 +1,904 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "x402-transit",
+    "version": "0.1.0",
+    "description": "Transit trip planning and live delay snapshots from open GTFS / GTFS-Realtime feeds, priced per query. Paid routes use the x402 protocol: pay in USDC on Base or Solana, your client picks the rail. The feed is public and keyless and is called live — there is no fixture mode, so an unreachable feed returns 502 rather than invented times.",
+    "license": {
+      "name": "Apache-2.0",
+      "identifier": "Apache-2.0"
+    },
+    "contact": {
+      "name": "nirholas",
+      "email": "nichxbt@gmail.com",
+      "url": "https://github.com/nirholas/x402-transit"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:4024",
+      "description": "Local development"
+    }
+  ],
+  "paths": {
+    "/plan": {
+      "get": {
+        "summary": "Transit itinerary options between two stops (x402 paid, $0.002)",
+        "operationId": "planTrip",
+        "description": "Direct rides where a route serves both stops, otherwise one-transfer itineraries via a shared interchange (minimum 2-minute connection). Times are scheduled; predictedDeparture/predictedArrival are filled in where the realtime feed has an update for that trip.",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "South Station",
+            "description": "Stop id (place-sstat), station name, or \"lat,lon\""
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Porter",
+            "description": "Same forms as from"
+          },
+          {
+            "name": "departAfter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "description": "ISO 8601; defaults to now"
+          },
+          {
+            "name": "max",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10,
+              "default": 3
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Itinerary options, earliest departure first",
+            "headers": {
+              "X-PAYMENT-RESPONSE": {
+                "description": "Base64 JSON settlement receipt: { success, rail: \"evm\"|\"solana\", network, transaction, payer }",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanResult"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing from/to, malformed departAfter, or both resolve to the same stop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "hint": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "404": {
+            "description": "A place could not be resolved to a stop in this feed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "hint": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The public GTFS feed is unreachable or rate-limiting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "hint": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/delays": {
+      "get": {
+        "summary": "Live delay snapshot for a stop (x402 paid, $0.001)",
+        "operationId": "delays",
+        "description": "delaySeconds is the realtime prediction minus the scheduled time for the same trip at this stop — measured from the feed, not modelled. Added or unscheduled service has delaySeconds: null and status: \"unknown\".",
+        "parameters": [
+          {
+            "name": "stop",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "South Station",
+            "description": "Stop id, station name, or \"lat,lon\""
+          },
+          {
+            "name": "route",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Red",
+            "description": "Optional routeId filter"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Delay snapshot with a summary and per-arrival detail",
+            "headers": {
+              "X-PAYMENT-RESPONSE": {
+                "description": "Base64 JSON settlement receipt: { success, rail: \"evm\"|\"solana\", network, transaction, payer }",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DelaySnapshot"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing stop",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "hint": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "402": {
+            "$ref": "#/components/responses/PaymentRequired"
+          },
+          "404": {
+            "description": "The stop could not be resolved in this feed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "hint": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "The public GTFS feed is unreachable or rate-limiting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "type": "string"
+                    },
+                    "message": {
+                      "type": "string"
+                    },
+                    "hint": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "summary": "Service status and feed (free)",
+        "operationId": "health",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "ok": {
+                      "type": "boolean"
+                    },
+                    "service": {
+                      "type": "string"
+                    },
+                    "source": {
+                      "const": "gtfs-live"
+                    },
+                    "agency": {
+                      "type": "string"
+                    },
+                    "feed": {
+                      "type": "string"
+                    },
+                    "rails": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/stops": {
+      "get": {
+        "summary": "Search stops by name (free)",
+        "operationId": "stops",
+        "description": "Free stop lookup so a caller never pays to discover a stop id.",
+        "parameters": [
+          {
+            "name": "query",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "Porter"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Matching parent stations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agency": {
+                      "type": "string"
+                    },
+                    "query": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "stops": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "id": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "latitude": {
+                            "type": "number"
+                          },
+                          "longitude": {
+                            "type": "number"
+                          },
+                          "municipality": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Feed unreachable"
+          }
+        }
+      }
+    },
+    "/routes": {
+      "get": {
+        "summary": "Routes, optionally at one stop (free)",
+        "operationId": "routes",
+        "parameters": [
+          {
+            "name": "stop",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "place-sstat"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Route list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "agency": {
+                      "type": "string"
+                    },
+                    "count": {
+                      "type": "integer"
+                    },
+                    "routes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "routeId": {
+                            "type": "string"
+                          },
+                          "name": {
+                            "type": "string"
+                          },
+                          "description": {
+                            "type": "string"
+                          },
+                          "type": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Feed unreachable"
+          }
+        }
+      }
+    },
+    "/.well-known/x402": {
+      "get": {
+        "summary": "x402 discovery manifest (free)",
+        "operationId": "manifest",
+        "responses": {
+          "200": {
+            "description": "Discovery manifest listing every paid resource on both rails",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PaymentRequirements": {
+        "type": "object",
+        "description": "x402 payment requirements — one accepted payment option (one rail). A 402 lists one of these per rail: USDC on Base and USDC on Solana.",
+        "properties": {
+          "scheme": {
+            "type": "string",
+            "enum": [
+              "exact"
+            ]
+          },
+          "network": {
+            "type": "string",
+            "enum": [
+              "base-sepolia",
+              "base",
+              "solana",
+              "solana-devnet"
+            ],
+            "description": "EVM rail: base-sepolia | base. Solana rail: solana | solana-devnet."
+          },
+          "maxAmountRequired": {
+            "type": "string",
+            "description": "Atomic USDC units (6 decimals)"
+          },
+          "resource": {
+            "type": "string",
+            "format": "uri"
+          },
+          "description": {
+            "type": "string"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "payTo": {
+            "type": "string",
+            "description": "0x… on the EVM rail, base58 on the Solana rail"
+          },
+          "maxTimeoutSeconds": {
+            "type": "integer"
+          },
+          "asset": {
+            "type": "string",
+            "description": "USDC contract address (EVM) or SPL mint (Solana)"
+          },
+          "outputSchema": {
+            "type": "object"
+          },
+          "extra": {
+            "type": "object",
+            "description": "EVM: the token EIP-712 domain. Solana: mint name/decimals plus the optional facilitator feePayer."
+          }
+        },
+        "required": [
+          "scheme",
+          "network",
+          "maxAmountRequired",
+          "resource",
+          "payTo",
+          "asset"
+        ]
+      },
+      "ItineraryLeg": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "string"
+          },
+          "routeName": {
+            "type": "string"
+          },
+          "routeType": {
+            "type": "string",
+            "description": "subway | light-rail | commuter-rail | bus | ferry | transit"
+          },
+          "headsign": {
+            "type": "string"
+          },
+          "tripId": {
+            "type": "string"
+          },
+          "from": {
+            "type": "object",
+            "properties": {
+              "stopId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "scheduledDeparture": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "predictedDeparture": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            }
+          },
+          "to": {
+            "type": "object",
+            "properties": {
+              "stopId": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "scheduledArrival": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              },
+              "predictedArrival": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "format": "date-time"
+              }
+            }
+          },
+          "durationMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "realtime": {
+            "type": "boolean",
+            "description": "true when the realtime feed had an update for this trip"
+          }
+        }
+      },
+      "Itinerary": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "enum": [
+              "direct",
+              "one-transfer"
+            ]
+          },
+          "departure": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "arrival": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "durationMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "transfers": {
+            "type": "integer"
+          },
+          "legs": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ItineraryLeg"
+            }
+          }
+        },
+        "required": [
+          "kind",
+          "legs",
+          "transfers"
+        ]
+      },
+      "PlanResult": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "const": "gtfs-live"
+          },
+          "agency": {
+            "type": "string"
+          },
+          "feed": {
+            "type": "string"
+          },
+          "query": {
+            "type": "object"
+          },
+          "itineraries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Itinerary"
+            }
+          },
+          "note": {
+            "type": "string"
+          },
+          "retrievedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "source",
+          "itineraries",
+          "retrievedAt"
+        ]
+      },
+      "DelayEntry": {
+        "type": "object",
+        "properties": {
+          "routeId": {
+            "type": "string"
+          },
+          "routeName": {
+            "type": "string"
+          },
+          "tripId": {
+            "type": "string"
+          },
+          "headsign": {
+            "type": "string"
+          },
+          "directionId": {
+            "type": "integer"
+          },
+          "stopId": {
+            "type": "string"
+          },
+          "scheduled": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "predicted": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "delaySeconds": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "delayMinutes": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "status": {
+            "enum": [
+              "early",
+              "on-time",
+              "late",
+              "unknown"
+            ]
+          },
+          "uncertaintySeconds": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          }
+        }
+      },
+      "DelaySnapshot": {
+        "type": "object",
+        "properties": {
+          "source": {
+            "const": "gtfs-rt-live"
+          },
+          "agency": {
+            "type": "string"
+          },
+          "feed": {
+            "type": "string"
+          },
+          "query": {
+            "type": "object"
+          },
+          "summary": {
+            "type": "object",
+            "properties": {
+              "predictions": {
+                "type": "integer"
+              },
+              "withSchedule": {
+                "type": "integer"
+              },
+              "onTime": {
+                "type": "integer"
+              },
+              "late": {
+                "type": "integer"
+              },
+              "early": {
+                "type": "integer"
+              },
+              "medianDelaySeconds": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "worstDelaySeconds": {
+                "type": [
+                  "integer",
+                  "null"
+                ]
+              },
+              "verdict": {
+                "enum": [
+                  "no-data",
+                  "running-well",
+                  "minor-delays",
+                  "significant-delays"
+                ]
+              }
+            }
+          },
+          "arrivals": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DelayEntry"
+            }
+          },
+          "note": {
+            "type": "string"
+          },
+          "retrievedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "source",
+          "summary",
+          "arrivals",
+          "retrievedAt"
+        ]
+      }
+    },
+    "responses": {
+      "PaymentRequired": {
+        "description": "Payment required — pay via x402 on either rail and retry with the X-PAYMENT header. `accepts` holds one entry per rail.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "type": "object",
+              "properties": {
+                "x402Version": {
+                  "type": "integer"
+                },
+                "error": {
+                  "type": "string"
+                },
+                "accepts": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PaymentRequirements"
+                  }
+                }
+              }
+            },
+            "example": {
+              "x402Version": 1,
+              "error": "X-PAYMENT header required — pay in USDC on Base or Solana, your pick.",
+              "accepts": [
+                {
+                  "scheme": "exact",
+                  "network": "base-sepolia",
+                  "maxAmountRequired": "2000",
+                  "resource": "http://localhost:4024/plan",
+                  "description": "Transit itinerary options between two stops — legs, routes, scheduled times, and realtime predictions where the feed has them",
+                  "mimeType": "application/json",
+                  "payTo": "0x40252CFDF8B20Ed757D61ff157719F33Ec332402",
+                  "maxTimeoutSeconds": 60,
+                  "asset": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+                  "extra": {
+                    "name": "USDC",
+                    "version": "2"
+                  }
+                },
+                {
+                  "scheme": "exact",
+                  "network": "solana",
+                  "maxAmountRequired": "2000",
+                  "resource": "http://localhost:4024/plan",
+                  "description": "Transit itinerary options between two stops — legs, routes, scheduled times, and realtime predictions where the feed has them",
+                  "mimeType": "application/json",
+                  "payTo": "WwwuGbqHrwF5RG89KhUbmRWEvjnRH9k5kVM5p7T3WwW",
+                  "maxTimeoutSeconds": 60,
+                  "asset": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                  "extra": {
+                    "name": "USDC",
+                    "decimals": 6
+                  }
+                }
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}
