@@ -12,7 +12,8 @@
       "name": "nirholas",
       "email": "nichxbt@gmail.com",
       "url": "https://github.com/nirholas/x402-transit"
-    }
+    },
+    "x-guidance": "Transit trip planning and live delay snapshots from open GTFS/GTFS-RT feeds, priced per query. Every paid route answers an unpaid request with HTTP 402 and a list of accepted payments (USDC on Base or Solana — pick either), then returns the purchased artifact in the body of the same request once you retry with an X-PAYMENT header. Payment and delivery happen in one round trip; nothing is promised for later. GET /plan ($0.002) returns itinerary options GET /delays ($0.001) returns live delay snapshot for route/stop"
   },
   "servers": [
     {
@@ -154,6 +155,18 @@
               }
             }
           }
+        },
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.002000"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
         }
       }
     },
@@ -280,6 +293,18 @@
               }
             }
           }
+        },
+        "x-payment-info": {
+          "price": {
+            "mode": "fixed",
+            "currency": "USD",
+            "amount": "0.001000"
+          },
+          "protocols": [
+            {
+              "x402": {}
+            }
+          ]
         }
       }
     },
