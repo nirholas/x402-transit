@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" role="img" aria-label="x402 Transit">
+  <rect width="1200" height="630" fill="#0b0c10"/>
+  <rect width="1200" height="6" fill="#00875a"/>
+  <g transform="translate(96 148)">
+    <rect width="96" height="96" rx="21" fill="#00875a"/>
+    <g transform="translate(-0 -0) scale(1.5)"><g fill="none" stroke="#fff" stroke-width="4" stroke-linejoin="round"><rect x="15" y="13" width="34" height="32" rx="6"/><path d="M15 30h34"/></g><circle cx="23" cy="51" r="3.5" fill="#fff"/><circle cx="41" cy="51" r="3.5" fill="#fff"/></g>
+  </g>
+  <text x="96" y="330" fill="#e8eaf2" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="76" font-weight="700">x402 Transit</text>
+  <text x="96" y="396" fill="#9aa1b5" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="34">Trip plans and live delay snapshots from open GTFS feeds.</text>
+  <text x="96" y="446" fill="#9aa1b5" font-family="system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="34">A fraction of a cent per query, in USDC on Base or Solana.</text>
+  <g font-family="ui-monospace, SFMono-Regular, Menlo, monospace" font-size="27" fill="#00875a">
+    <text x="96" y="536">GET /plan</text>
+    <text x="396" y="536">GET /delays</text>
+    <text x="696" y="536">HTTP 402 · USDC</text>
+  </g>
+</svg>

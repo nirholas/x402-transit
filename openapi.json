@@ -346,7 +346,8 @@
               }
             }
           }
-        }
+        },
+        "security": []
       }
     },
     "/stops": {
@@ -413,7 +414,8 @@
           "502": {
             "description": "Feed unreachable"
           }
-        }
+        },
+        "security": []
       }
     },
     "/routes": {
@@ -476,7 +478,8 @@
           "502": {
             "description": "Feed unreachable"
           }
-        }
+        },
+        "security": []
       }
     },
     "/.well-known/x402": {
@@ -494,7 +497,8 @@
               }
             }
           }
-        }
+        },
+        "security": []
       }
     }
   },

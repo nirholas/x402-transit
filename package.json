@@ -27,6 +27,7 @@
   "scripts": {
     "dev": "tsx src/server.ts",
     "build": "tsc",
+    "schemas": "tsx scripts/gen-schemas.ts",
     "start": "node dist/server.js",
     "client": "tsx examples/agent-client.ts"
   },

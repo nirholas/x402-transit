@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>x402 Transit — pay per query in USDC, no account</title>
+<meta name="description" content="Trip plans and live delay snapshots from open GTFS feeds. A fraction of a cent per query, in USDC on Base or Solana.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
+<meta property="og:type" content="website">
+<meta property="og:title" content="x402 Transit — pay per query in USDC, no account">
+<meta property="og:description" content="Trip plans and live delay snapshots from open GTFS feeds. A fraction of a cent per query, in USDC on Base or Solana.">
+<meta property="og:image" content="/og.svg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="/og.svg">
+<style>
+  :root {
+    --accent: #00875a;
+    --bg: #ffffff; --fg: #111319; --muted: #5a6072; --card: #f5f6fa; --border: #e3e5ec;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0b0c10; --fg: #e8eaf2; --muted: #9aa1b5; --card: #15171e; --border: #262a35; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.55 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  header { display: flex; gap: 1rem; align-items: flex-start; margin-bottom: 1.4rem; }
+  header img { width: 52px; height: 52px; flex: none; }
+  h1 { font-size: 1.8rem; margin: 0 0 .35rem; }
+  header p { color: var(--muted); margin: 0; }
+  h2 { font-size: 1.05rem; margin: 2.4rem 0 .8rem; }
+  table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+  th, td { text-align: left; padding: .55rem .6rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-weight: 600; font-size: .78rem; text-transform: uppercase;
+       letter-spacing: .05em; }
+  td code { font-size: .88rem; }
+  .price { font-variant-numeric: tabular-nums; white-space: nowrap; font-weight: 600; }
+  .free { color: var(--muted); font-weight: 400; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  pre { background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+        padding: .9rem 1rem; overflow-x: auto; font-size: .84rem; line-height: 1.5; }
+  a { color: var(--accent); }
+  ul { padding-left: 1.15rem; }
+  li { margin: .3rem 0; }
+  footer { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--border);
+           color: var(--muted); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <img src="/favicon.svg" alt="">
+  <div>
+    <h1>x402 Transit</h1>
+    <p>Transit trip planning and live delay snapshots from open GTFS feeds, priced per query. The feed is called live — an unreachable feed returns 502 rather than invented arrival times.</p>
+  </div>
+</header>
+
+<p>Paid routes answer an unpaid request with <strong>HTTP 402</strong> and a challenge listing
+both payment rails. Pay in USDC on <strong>Base</strong> or <strong>Solana</strong> &mdash; your
+client picks &mdash; and the same request returns the data. There is nothing to sign up for.</p>
+
+<h2>Paid routes</h2>
+<table>
+  <thead><tr><th>Route</th><th>Price</th><th>Returns</th></tr></thead>
+  <tbody>
+    <tr><td><code>GET /plan</code></td><td class="price">$0.002</td><td>Transit itinerary options between two stops</td></tr>
+    <tr><td><code>GET /delays</code></td><td class="price">$0.001</td><td>Live delay snapshot for a stop</td></tr>
+  </tbody>
+</table>
+
+<h2>Free routes</h2>
+<table>
+  <thead><tr><th>Route</th><th></th><th>Returns</th></tr></thead>
+  <tbody>
+    <tr><td><code>GET /health</code></td><td class="price free">free</td><td>Service status and feed</td></tr>
+    <tr><td><code>GET /stops</code></td><td class="price free">free</td><td>Search stops by name</td></tr>
+    <tr><td><code>GET /routes</code></td><td class="price free">free</td><td>Routes, optionally at one stop</td></tr>
+    <tr><td><code>GET /.well-known/x402</code></td><td class="price free">free</td><td>x402 discovery manifest</td></tr>
+  </tbody>
+</table>
+
+<h2>Try it</h2>
+<pre>BASE=http://localhost:4024
+
+# Unpaid: the 402 challenge, including how to call the route and what comes back
+curl &quot;$BASE/delays?stopId=&lt;stop&gt;&quot;
+
+# Paid: x402-fetch wraps a wallet around fetch and retries automatically
+npm i x402-fetch viem</pre>
+
+<h2>For agents</h2>
+<ul>
+  <li><a href="/openapi.json"><code>/openapi.json</code></a> &mdash; OpenAPI 3.1, every route,
+      parameter and response schema.</li>
+  <li><a href="/.well-known/x402"><code>/.well-known/x402</code></a> &mdash; the machine-readable
+      price sheet, both rails.</li>
+  <li>Every 402 challenge carries <code>accepts[].outputSchema</code>: <code>input</code> is how to
+      build the request, <code>output</code> is the JSON Schema of what you get after paying. One
+      402 is enough to call this API correctly.</li>
+</ul>
+
+<footer>
+  <a href="https://github.com/nirholas/x402-transit">github.com/nirholas/x402-transit</a>
+  &middot; x402 protocol v1 &middot; USDC on Base or Solana
+</footer>
+
+</div>
+</body>
+</html>

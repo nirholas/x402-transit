@@ -15,6 +15,7 @@ import express from "express";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildRails, describeRails, paywall, type RoutePrices } from "./payments.js";
+import { ROUTE_SCHEMAS } from "./schemas.js";
 import { AGENCY_NAME, API_BASE, attr, feedGet, searchStations, stations } from "./gtfs.js";
 import {
   BadRequestError,
@@ -30,18 +31,27 @@ const rails = buildRails();
 
 const PRICES = { plan: "$0.002", delays: "$0.001" } as const;
 
+/**
+ * Every paid route publishes its request and response schema inside the 402
+ * challenge, so an agent that has never seen this API can read one 402 and know
+ * how to call the route and what it will get back. `ROUTE_SCHEMAS` is generated
+ * from `public/openapi.json` (`npm run schemas`), which is what keeps the
+ * challenge and the published OpenAPI document from drifting apart.
+ */
 const routePrices: RoutePrices = {
   "GET /plan": {
     price: PRICES.plan,
     description:
       "Transit itinerary options between two stops — legs, routes, scheduled times, and realtime predictions where the feed has them",
     mimeType: "application/json",
+    outputSchema: ROUTE_SCHEMAS["GET /plan"],
   },
   "GET /delays": {
     price: PRICES.delays,
     description:
       "Live delay snapshot for a stop (optionally one route) — realtime prediction minus scheduled time per upcoming arrival, plus a summary",
     mimeType: "application/json",
+    outputSchema: ROUTE_SCHEMAS["GET /delays"],
   },
 };
 
