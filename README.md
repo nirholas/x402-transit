@@ -160,3 +160,7 @@ Questions, bugs, or listing requests: **nichxbt@gmail.com**
 ## License
 
 [Apache-2.0](LICENSE)
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=nirholas/x402-transit&type=Date)](https://www.star-history.com/#nirholas/x402-transit&Date)
