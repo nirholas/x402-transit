@@ -1,0 +1,19 @@
+{
+  "name": "x402-transit",
+  "version": "0.1.0",
+  "description": "Transit trip planning and live delay snapshots from open GTFS and GTFS-Realtime feeds, priced per query over x402.",
+  "author": {
+    "name": "nirholas"
+  },
+  "repository": "https://github.com/nirholas/x402-transit",
+  "homepage": "https://nirholas.github.io/x402-transit/",
+  "license": "Apache-2.0",
+  "keywords": [
+    "x402",
+    "transit",
+    "gtfs",
+    "gtfs-realtime",
+    "usdc",
+    "ai-agents"
+  ]
+}

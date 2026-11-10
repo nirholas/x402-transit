@@ -1,0 +1,23 @@
+{
+  "name": "x402-transit",
+  "owner": {
+    "name": "nirholas"
+  },
+  "description": "Transit trip planning and live delay snapshots from open GTFS and GTFS-Realtime feeds, priced per query over x402.",
+  "plugins": [
+    {
+      "name": "x402-transit",
+      "source": "./plugins/x402-transit",
+      "description": "Transit trip planning and live delay snapshots from open GTFS and GTFS-Realtime feeds, priced per query over x402.",
+      "category": "data",
+      "tags": [
+        "x402",
+        "transit",
+        "gtfs",
+        "gtfs-realtime",
+        "usdc",
+        "ai-agents"
+      ]
+    }
+  ]
+}
